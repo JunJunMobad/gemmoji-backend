@@ -92,9 +92,11 @@ async def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    if not os.getenv("FIREBASE_CREDENTIALS_PATH"):
-        print("❌ Error: FIREBASE_CREDENTIALS_PATH environment variable not set")
-        print("   Please set it to the path of your Firebase service account key file")
+    if not os.getenv("FIREBASE_CREDENTIALS_JSON") and not os.getenv("FIREBASE_CREDENTIALS_PATH"):
+        print("❌ Error: Firebase credentials not configured")
+        print("   Please set either:")
+        print("   1. FIREBASE_CREDENTIALS_JSON environment variable with the full JSON content, or")
+        print("   2. FIREBASE_CREDENTIALS_PATH environment variable pointing to your serviceAccountKey.json file")
         sys.exit(1)
     
     asyncio.run(main())
