@@ -12,24 +12,27 @@ class PackMigrationService:
     
     async def migrate_pack_to_firestore(self, pack_data: PackMigrationData, user_id: str) -> str:
         try:
-            created_at = datetime.fromisoformat(pack_data.created_at)
-            scraped_at = datetime.fromisoformat(pack_data.scraped_at)
+            created_at_dt = datetime.fromisoformat(pack_data.created_at)
+            scraped_at_dt = datetime.fromisoformat(pack_data.scraped_at)
+            created_at_ms = int(created_at_dt.timestamp() * 1000)
+            scraped_at_ms = int(scraped_at_dt.timestamp() * 1000)
             
             pack = Pack(
                 name=pack_data.name,
                 url=pack_data.url,
-                download_count=pack_data.download_count,
-                emoji_count=pack_data.emoji_count,
+                downloadCount=pack_data.download_count,
+                emojiCount=pack_data.emoji_count,
                 description=pack_data.description,
-                created_at=created_at,
-                scraped_at=scraped_at,
-                user_id=user_id
+                createdAt=created_at_ms,
+                scrapedAt=scraped_at_ms,
+                userID=user_id
             )
             
             doc_ref = self.db.collection("packs").document(user_id).collection("userPacks").document()
             doc_ref.set(pack.dict())
             
             print(f"✅ Migrated pack '{pack_data.name}' with ID: {doc_ref.id}")
+            print(f"   📊 Fields: createdAt={created_at_ms}, downloadCount={pack_data.download_count}, emojiCount={pack_data.emoji_count}")
             return doc_ref.id
             
         except Exception as e:

@@ -20,12 +20,12 @@ class EmojiListResponse(BaseModel):
 class Pack(BaseModel):
     name: str = Field(..., description="Pack name")
     url: str = Field(..., description="Pack URL")
-    download_count: int = Field(..., description="Download count")
-    emoji_count: int = Field(..., description="Emoji count")
+    downloadCount: int = Field(..., description="Download count")
+    emojiCount: int = Field(..., description="Emoji count")
     description: str = Field(..., description="Pack description")
-    created_at: datetime = Field(..., description="Creation timestamp")
-    scraped_at: datetime = Field(..., description="Scraped timestamp")
-    user_id: str = Field(..., description="User ID")
+    createdAt: int = Field(..., description="Creation timestamp in milliseconds")
+    scrapedAt: int = Field(..., description="Scraped timestamp in milliseconds")
+    userID: str = Field(..., description="User ID")
 
 class PackMigrationData(BaseModel):
     id: int = Field(..., description="Original pack ID")
