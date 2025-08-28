@@ -27,6 +27,11 @@ class Pack(BaseModel):
     scrapedAt: int = Field(..., description="Scraped timestamp in milliseconds")
     userID: str = Field(..., description="User ID")
 
+class PackListResponse(BaseModel):
+    packs: List[Pack]
+    next_cursor: Optional[int] = Field(None, description="Cursor for next page (createdAt timestamp)")
+    has_more: bool = Field(False, description="Whether there are more results available")
+
 class PackMigrationData(BaseModel):
     id: int = Field(..., description="Original pack ID")
     name: str = Field(..., description="Pack name")

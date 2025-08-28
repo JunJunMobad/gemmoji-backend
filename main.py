@@ -12,11 +12,11 @@ load_dotenv()
 
 initialize_firebase()
 
-from app.routes import emoji_router
+from app.routes import emoji_router, pack_router
 
 app = FastAPI(
-    title="Emoji Backend API",
-    description="Backend for emoji listing",
+    title="Gemmoji Backend API",
+    description="Backend for emoji and pack listing",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -32,14 +32,15 @@ app.add_middleware(
 )
 
 app.include_router(emoji_router, prefix="/api/v1/emojis", tags=["emojis"])
+app.include_router(pack_router, prefix="/api/v1/packs", tags=["packs"])
 
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi(
-        title="Emoji Backend API",
+        title="Gemmoji Backend API",
         version="1.0.0",
-        description="Backend for emoji listing and management",
+        description="Backend for Gemmoji",
         routes=app.routes,
     )
     app.openapi_schema = openapi_schema
