@@ -22,21 +22,19 @@ async def load_pack_data() -> list[PackMigrationData]:
     if not JSON_FILE_PATH.exists():
         raise FileNotFoundError(f"JSON file not found: {JSON_FILE_PATH}")
     
-    print(f"📂 Loading pack data from: {JSON_FILE_PATH}")
+    print(f"Loading pack data from: {JSON_FILE_PATH}")
     
-    with open(JSON_FILE_PATH, 'r', encoding='utf-8') as file:
+    with open(JSON_FILE_PATH, 'r') as file:
         raw_data = json.load(file)
     
     pack_data = []
     for item in raw_data:
         try:
-            pack = PackMigrationData(**item)
-            pack_data.append(pack)
+            pack_data.append(PackMigrationData(**item))
         except Exception as e:
-            print(f"❌ Invalid pack data: {item.get('name', 'Unknown')} - {str(e)}")
-            continue
+            print(f"Invalid pack data: {item.get('name', 'Unknown')} - {e}")
     
-    print(f"✅ Loaded {len(pack_data)} valid packs from {len(raw_data)} total items")
+    print(f"Loaded {len(pack_data)} packs")
     return pack_data
 
 async def main():

@@ -17,16 +17,7 @@ async def list_packs(
     cursor: Optional[int] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
     user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches packs from all users")
 ):
-    """
-    List packs with efficient cursor-based pagination
-    
-    - **query**: Optional text to search in the pack name and description fields (prefix match)
-    - **limit**: Number of records per page (default: 20, max: 100)
-    - **cursor**: Cursor for pagination (createdAt timestamp from previous response)
-    - **user_id**: Optional user ID to filter packs. If not provided, fetches packs from all users
-    
-    Returns packs with next_cursor for efficient pagination. Use next_cursor as cursor parameter for the next page.
-    """
+    """List packs with pagination and search"""
     try:
         result = await firebase_service.list_user_packs(
             query=query,

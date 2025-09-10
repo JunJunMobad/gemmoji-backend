@@ -4,11 +4,13 @@ from google.cloud.firestore import FieldFilter, Or, And
 
 from ..firebase_config import get_firestore_client
 from ..models import EmojiBase, Pack
+from .gemini_service import GeminiService
 
 class FirebaseService:
     
     def __init__(self):
         self.db = get_firestore_client()
+        self.gemini_service = GeminiService()
     
     async def list_user_emojis(
         self, 
@@ -117,4 +119,62 @@ class FirebaseService:
             print(f"Error in list_user_packs: {str(e)}")
             import traceback
             traceback.print_exc()
+            raise
+    
+    async def increment_emoji_download_count(self, user_id: str, emoji_id: str) -> Dict[str, Any]:
+        try:
+            doc_ref = self.db.collection("emojis").document(user_id).collection("usersEmojis").document(emoji_id)
+            
+            doc_ref.update({
+                "downloadCount": firestore.Increment(1)
+            })
+            
+            updated_doc = doc_ref.get()
+            if not updated_doc.exists:
+                raise ValueError(f"Emoji not found: {emoji_id}")
+            
+            doc_data = updated_doc.to_dict()
+            current_count = doc_data.get('downloadCount', 0)
+            
+            return {
+                "success": True,
+                "emojiID": emoji_id,
+                "downloadCount": current_count,
+                "message": f"Download count incremented to {current_count}"
+            }
+            
+        except Exception as e:
+            print(f"Error incrementing download count: {str(e)}")
+            raise
+    
+    async def categorize_emoji(self, user_id: str, emoji_id: str) -> Dict[str, Any]:
+        """Categorize an emoji using Gemini AI and update Firestore"""
+        try:
+            doc_ref = self.db.collection("emojis").document(user_id).collection("usersEmojis").document(emoji_id)
+            
+            doc = doc_ref.get()
+            if not doc.exists:
+                raise ValueError(f"Emoji not found: {emoji_id}")
+            
+            doc_data = doc.to_dict()
+            prompt = doc_data.get('prompt')
+            if not prompt:
+                raise ValueError(f"No prompt found for emoji: {emoji_id}")
+            
+            category = await self.gemini_service.categorize_emoji_prompt(prompt)
+            
+            doc_ref.update({
+                "category": category
+            })
+            
+            return {
+                "success": True,
+                "emojiID": emoji_id,
+                "prompt": prompt,
+                "category": category,
+                "message": f"Emoji categorized as '{category}'"
+            }
+            
+        except Exception as e:
+            print(f"Error categorizing emoji: {str(e)}")
             raise

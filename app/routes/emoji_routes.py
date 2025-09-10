@@ -1,5 +1,6 @@
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Path
+from pydantic import BaseModel, Field
 
 from ..services.firebase_service import FirebaseService
 from ..models import EmojiListResponse
@@ -15,17 +16,7 @@ async def list_emojis(
     visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
     user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users")
 ):
-    """
-    List emojis with efficient cursor-based pagination
-    
-    - **query**: Optional text to search in the prompt field (partial match)
-    - **limit**: Number of records per page (default: 20, max: 100)
-    - **cursor**: Cursor for pagination (createdAt timestamp from previous response)
-    - **visibility**: Filter by visibility (Public/Private)
-    - **user_id**: Optional user ID to filter emojis. If not provided, fetches emojis from all users
-    
-    Returns emojis with next_cursor for efficient pagination. Use next_cursor as cursor parameter for the next page.
-    """
+    """List emojis with pagination and filtering"""
     try:
         result = await firebase_service.list_user_emojis(
             query=query,
@@ -37,3 +28,44 @@ async def list_emojis(
         return EmojiListResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list emojis: {str(e)}")
+
+class DownloadResponse(BaseModel):
+    success: bool
+    emojiID: str
+    downloadCount: int
+    message: str
+
+class CategorizeResponse(BaseModel):
+    success: bool
+    emojiID: str
+    prompt: str
+    category: str
+    message: str
+
+@router.post("/{user_id}/{emoji_id}/download", response_model=DownloadResponse)
+async def increment_download_count(
+    user_id: str = Path(..., description="User ID who owns the emoji"),
+    emoji_id: str = Path(..., description="Emoji ID to increment download count for")
+):
+    """Increment download count for an emoji"""
+    try:
+        result = await firebase_service.increment_emoji_download_count(user_id, emoji_id)
+        return DownloadResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to increment download count: {str(e)}")
+
+@router.post("/{user_id}/{emoji_id}/categorize", response_model=CategorizeResponse)
+async def categorize_emoji(
+    user_id: str = Path(..., description="User ID who owns the emoji"),
+    emoji_id: str = Path(..., description="Emoji ID to categorize")
+):
+    """Categorize an emoji using AI"""
+    try:
+        result = await firebase_service.categorize_emoji(user_id, emoji_id)
+        return CategorizeResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to categorize emoji: {str(e)}")
