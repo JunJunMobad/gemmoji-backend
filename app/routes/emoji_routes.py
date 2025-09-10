@@ -42,6 +42,17 @@ class CategorizeResponse(BaseModel):
     category: str
     message: str
 
+class VisibilityUpdateRequest(BaseModel):
+    user_id: str
+    emoji_id: str
+    visibility: str
+
+class VisibilityResponse(BaseModel):
+    success: bool
+    emojiID: str
+    visibility: str
+    message: str
+
 @router.post("/{user_id}/{emoji_id}/download", response_model=DownloadResponse)
 async def increment_download_count(
     user_id: str = Path(..., description="User ID who owns the emoji"),
@@ -69,3 +80,18 @@ async def categorize_emoji(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to categorize emoji: {str(e)}")
+
+@router.put("/visibility", response_model=VisibilityResponse)
+async def update_emoji_visibility(request: VisibilityUpdateRequest):
+    """Update emoji visibility between Public and Private"""
+    try:
+        result = await firebase_service.update_emoji_visibility(
+            request.user_id, 
+            request.emoji_id, 
+            request.visibility
+        )
+        return VisibilityResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update visibility: {str(e)}")

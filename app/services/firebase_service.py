@@ -178,3 +178,30 @@ class FirebaseService:
         except Exception as e:
             print(f"Error categorizing emoji: {str(e)}")
             raise
+    
+    async def update_emoji_visibility(self, user_id: str, emoji_id: str, visibility: str) -> Dict[str, Any]:
+        """Update emoji visibility (Public/Private)"""
+        try:
+            if visibility not in ["Public", "Private"]:
+                raise ValueError("Visibility must be 'Public' or 'Private'")
+            
+            doc_ref = self.db.collection("emojis").document(user_id).collection("usersEmojis").document(emoji_id)
+            
+            doc = doc_ref.get()
+            if not doc.exists:
+                raise ValueError(f"Emoji not found: {emoji_id}")
+            
+            doc_ref.update({
+                "visibility": visibility
+            })
+            
+            return {
+                "success": True,
+                "emojiID": emoji_id,
+                "visibility": visibility,
+                "message": f"Emoji visibility updated to {visibility}"
+            }
+            
+        except Exception as e:
+            print(f"Error updating emoji visibility: {str(e)}")
+            raise
