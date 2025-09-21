@@ -16,7 +16,7 @@ class EmojiBase(BaseModel):
 
 class EmojiListResponse(BaseModel):
     emojis: List[EmojiBase]
-    next_cursor: Optional[int] = None
+    next_cursor: Optional[str] = None
     has_more: bool = False
 
 class Pack(BaseModel):
@@ -31,7 +31,7 @@ class Pack(BaseModel):
 
 class PackListResponse(BaseModel):
     packs: List[Pack]
-    next_cursor: Optional[int] = None
+    next_cursor: Optional[str] = None
     has_more: bool = False
 
 class PackMigrationData(BaseModel):

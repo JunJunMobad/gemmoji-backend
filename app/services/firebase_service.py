@@ -18,7 +18,8 @@ class FirebaseService:
         limit: int = 20,
         cursor: Optional[int] = None,
         visibility: Optional[str] = None,
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        category: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
             if user_id:
@@ -28,6 +29,9 @@ class FirebaseService:
             
             if visibility:
                 base_query = base_query.where("visibility", "==", visibility)
+            
+            if category:
+                base_query = base_query.where("category", "==", category)
             
             if query:
                 base_query = base_query.where("prompt", ">=", query).where("prompt", "<=", query + "\uf8ff")
@@ -204,4 +208,73 @@ class FirebaseService:
             
         except Exception as e:
             print(f"Error updating emoji visibility: {str(e)}")
+            raise
+    
+    async def list_popular_emojis(
+        self, 
+        query: Optional[str] = None,
+        limit: int = 20,
+        cursor: Optional[int] = None,
+        visibility: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        try:
+            if user_id:
+                base_query = self.db.collection("emojis").document(user_id).collection("usersEmojis")
+            else:
+                base_query = self.db.collection_group("usersEmojis")
+            
+            if visibility:
+                base_query = base_query.where("visibility", "==", visibility)
+            
+            if query:
+                base_query = base_query.where("prompt", ">=", query).where("prompt", "<=", query + "\uf8ff")
+            
+            base_query = base_query.order_by("downloadCount", direction=firestore.Query.DESCENDING)
+            base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
+            
+            base_query = base_query.limit(limit)
+            
+            if cursor:
+                try:
+                    if '_' in str(cursor):
+                        parts = str(cursor).split('_')
+                        if len(parts) == 2:
+                            cursor_download_count = int(parts[0])
+                            cursor_created_at = int(parts[1])
+                            base_query = base_query.start_after({
+                                "downloadCount": cursor_download_count,
+                                "createdAt": cursor_created_at
+                            })
+                    else:
+                        base_query = base_query.start_after({"createdAt": int(cursor)})
+                except (ValueError, IndexError):
+                    pass
+            
+            results = base_query.stream()
+            emojis = []
+            
+            for doc in results:
+                doc_data = doc.to_dict()
+                if 'createdAt' in doc_data and hasattr(doc_data['createdAt'], 'timestamp'):
+                    doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
+                emojis.append(EmojiBase(**doc_data))
+            
+            if len(emojis) == limit:
+                last_emoji = emojis[-1]
+                next_cursor = f"{last_emoji.downloadCount}_{last_emoji.createdAt}"
+            else:
+                next_cursor = None
+            has_more = len(emojis) == limit
+            
+            return {
+                "emojis": emojis,
+                "next_cursor": next_cursor,
+                "has_more": has_more
+            }
+            
+        except Exception as e:
+            print(f"Error in list_popular_emojis: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise
