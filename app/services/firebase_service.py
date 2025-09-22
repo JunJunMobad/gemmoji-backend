@@ -16,7 +16,7 @@ class FirebaseService:
         self, 
         query: Optional[str] = None,
         limit: int = 20,
-        cursor: Optional[int] = None,
+        cursor: Optional[str] = None,
         visibility: Optional[str] = None,
         user_id: Optional[str] = None,
         category: Optional[str] = None
@@ -28,20 +28,20 @@ class FirebaseService:
                 base_query = self.db.collection_group("usersEmojis")
             
             if visibility:
-                base_query = base_query.where("visibility", "==", visibility)
+                base_query = base_query.where(filter=FieldFilter("visibility", "==", visibility))
             
             if category:
-                base_query = base_query.where("category", "==", category)
+                base_query = base_query.where(filter=FieldFilter("category", "==", category))
             
             if query:
-                base_query = base_query.where("prompt", ">=", query).where("prompt", "<=", query + "\uf8ff")
+                base_query = base_query.where(filter=FieldFilter("prompt", ">=", query)).where(filter=FieldFilter("prompt", "<=", query + "\uf8ff"))
             
             base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
             
             base_query = base_query.limit(limit)
             
             if cursor:
-                base_query = base_query.start_after({"createdAt": cursor})
+                base_query = base_query.start_after({"createdAt": int(cursor)})
             
             results = base_query.stream()
             emojis = []
@@ -52,7 +52,7 @@ class FirebaseService:
                     doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
                 emojis.append(EmojiBase(**doc_data))
             
-            next_cursor = emojis[-1].createdAt if len(emojis) == limit else None
+            next_cursor = str(emojis[-1].createdAt) if len(emojis) == limit else None
             has_more = len(emojis) == limit
             
             return {
@@ -71,7 +71,7 @@ class FirebaseService:
         self, 
         query: Optional[str] = None,
         limit: int = 20,
-        cursor: Optional[int] = None,  
+        cursor: Optional[str] = None,  
         user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
@@ -99,7 +99,7 @@ class FirebaseService:
             base_query = base_query.limit(limit)
             
             if cursor:
-                base_query = base_query.start_after({"createdAt": cursor})
+                base_query = base_query.start_after({"createdAt": int(cursor)})
             
             results = base_query.stream()
             packs = []
@@ -110,7 +110,7 @@ class FirebaseService:
                     doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
                 packs.append(Pack(**doc_data))
             
-            next_cursor = packs[-1].createdAt if len(packs) == limit else None
+            next_cursor = str(packs[-1].createdAt) if len(packs) == limit else None
             has_more = len(packs) == limit
             
             return {
@@ -214,7 +214,7 @@ class FirebaseService:
         self, 
         query: Optional[str] = None,
         limit: int = 20,
-        cursor: Optional[int] = None,
+        cursor: Optional[str] = None,
         visibility: Optional[str] = None,
         user_id: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -225,10 +225,10 @@ class FirebaseService:
                 base_query = self.db.collection_group("usersEmojis")
             
             if visibility:
-                base_query = base_query.where("visibility", "==", visibility)
+                base_query = base_query.where(filter=FieldFilter("visibility", "==", visibility))
             
             if query:
-                base_query = base_query.where("prompt", ">=", query).where("prompt", "<=", query + "\uf8ff")
+                base_query = base_query.where(filter=FieldFilter("prompt", ">=", query)).where(filter=FieldFilter("prompt", "<=", query + "\uf8ff"))
             
             base_query = base_query.order_by("downloadCount", direction=firestore.Query.DESCENDING)
             base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)

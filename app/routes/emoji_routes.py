@@ -12,7 +12,7 @@ firebase_service = FirebaseService()
 async def list_emojis(
     query: Optional[str] = Query(None, description="Text to search in the prompt field"),
     limit: int = Query(20, ge=1, le=100, description="Number of records per page"),
-    cursor: Optional[int] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
+    cursor: Optional[str] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
     visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
     user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users"),
     category: Optional[str] = Query(None, description="Filter by category (Animals, Celebrities, Memes, Food, Emotions)")
@@ -102,7 +102,7 @@ async def update_emoji_visibility(request: VisibilityUpdateRequest):
 async def list_popular_emojis(
     query: Optional[str] = Query(None, description="Text to search in the prompt field"),
     limit: int = Query(20, ge=1, le=100, description="Number of records per page"),
-    cursor: Optional[int] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
+    cursor: Optional[str] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
     visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
     user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users")
 ):
