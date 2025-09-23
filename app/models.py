@@ -6,7 +6,7 @@ class EmojiBase(BaseModel):
     emojiID: str
     imageURL: Optional[str] = None
     imageURLWithBackground: Optional[str] = None
-    predictionID: str
+    predictionID: Optional[str] = None
     prompt: str
     userID: str
     visibility: str = "Public"

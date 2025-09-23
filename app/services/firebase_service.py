@@ -50,6 +50,10 @@ class FirebaseService:
                 doc_data = doc.to_dict()
                 if 'createdAt' in doc_data and hasattr(doc_data['createdAt'], 'timestamp'):
                     doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
+                
+                if 'predictionID' not in doc_data:
+                    doc_data['predictionID'] = 'legacy'
+                
                 emojis.append(EmojiBase(**doc_data))
             
             next_cursor = str(emojis[-1].createdAt) if len(emojis) == limit else None
@@ -258,6 +262,10 @@ class FirebaseService:
                 doc_data = doc.to_dict()
                 if 'createdAt' in doc_data and hasattr(doc_data['createdAt'], 'timestamp'):
                     doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
+                
+                if 'predictionID' not in doc_data:
+                    doc_data['predictionID'] = 'legacy'
+                
                 emojis.append(EmojiBase(**doc_data))
             
             if len(emojis) == limit:
