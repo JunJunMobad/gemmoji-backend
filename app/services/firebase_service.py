@@ -12,14 +12,15 @@ class FirebaseService:
         self.db = get_firestore_client()
         self.gemini_service = GeminiService()
     
-    async def list_user_emojis(
+    async def list_emojis(
         self, 
         query: Optional[str] = None,
         limit: int = 20,
-        cursor: Optional[str] = None,
+        cursor: Optional[int] = None,
         visibility: Optional[str] = None,
         user_id: Optional[str] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
+        sort: str = "recent"
     ) -> Dict[str, Any]:
         try:
             if user_id:
@@ -36,15 +37,20 @@ class FirebaseService:
             if query:
                 base_query = base_query.where(filter=FieldFilter("prompt", ">=", query)).where(filter=FieldFilter("prompt", "<=", query + "\uf8ff"))
             
-            base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
+            if sort == "popular":
+                base_query = base_query.order_by("downloadCount", direction=firestore.Query.DESCENDING)
+                base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
+            else:
+                base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
             
             base_query = base_query.limit(limit)
             
             if cursor:
-                base_query = base_query.start_after({"createdAt": int(cursor)})
+                base_query = base_query.offset(cursor)
             
             results = base_query.stream()
             emojis = []
+            current_position = cursor or 0
             
             for doc in results:
                 doc_data = doc.to_dict()
@@ -54,9 +60,12 @@ class FirebaseService:
                 if 'predictionID' not in doc_data:
                     doc_data['predictionID'] = 'legacy'
                 
+                if 'downloadCount' not in doc_data:
+                    doc_data['downloadCount'] = 0
+                
                 emojis.append(EmojiBase(**doc_data))
             
-            next_cursor = str(emojis[-1].createdAt) if len(emojis) == limit else None
+            next_cursor = current_position + len(emojis) if len(emojis) == limit else None
             has_more = len(emojis) == limit
             
             return {
@@ -66,16 +75,16 @@ class FirebaseService:
             }
             
         except Exception as e:
-            print(f"Error in list_user_emojis: {str(e)}")
+            print(f"Error in list_emojis: {str(e)}")
             import traceback
             traceback.print_exc()
             raise
     
-    async def list_user_packs(
+    async def list_packs(
         self, 
         query: Optional[str] = None,
         limit: int = 20,
-        cursor: Optional[str] = None,  
+        cursor: Optional[int] = None,
         user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
@@ -103,18 +112,20 @@ class FirebaseService:
             base_query = base_query.limit(limit)
             
             if cursor:
-                base_query = base_query.start_after({"createdAt": int(cursor)})
+                base_query = base_query.offset(cursor)
             
             results = base_query.stream()
             packs = []
+            current_position = cursor or 0
             
             for doc in results:
                 doc_data = doc.to_dict()
                 if 'createdAt' in doc_data and hasattr(doc_data['createdAt'], 'timestamp'):
-                    doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
+                    doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)                                
+                
                 packs.append(Pack(**doc_data))
             
-            next_cursor = str(packs[-1].createdAt) if len(packs) == limit else None
+            next_cursor = current_position + len(packs) if len(packs) == limit else None
             has_more = len(packs) == limit
             
             return {
@@ -124,7 +135,7 @@ class FirebaseService:
             }
             
         except Exception as e:
-            print(f"Error in list_user_packs: {str(e)}")
+            print(f"Error in list_packs: {str(e)}")
             import traceback
             traceback.print_exc()
             raise
@@ -214,75 +225,3 @@ class FirebaseService:
             print(f"Error updating emoji visibility: {str(e)}")
             raise
     
-    async def list_popular_emojis(
-        self, 
-        query: Optional[str] = None,
-        limit: int = 20,
-        cursor: Optional[str] = None,
-        visibility: Optional[str] = None,
-        user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        try:
-            if user_id:
-                base_query = self.db.collection("emojis").document(user_id).collection("usersEmojis")
-            else:
-                base_query = self.db.collection_group("usersEmojis")
-            
-            if visibility:
-                base_query = base_query.where(filter=FieldFilter("visibility", "==", visibility))
-            
-            if query:
-                base_query = base_query.where(filter=FieldFilter("prompt", ">=", query)).where(filter=FieldFilter("prompt", "<=", query + "\uf8ff"))
-            
-            base_query = base_query.order_by("downloadCount", direction=firestore.Query.DESCENDING)
-            base_query = base_query.order_by("createdAt", direction=firestore.Query.DESCENDING)
-            
-            base_query = base_query.limit(limit)
-            
-            if cursor:
-                try:
-                    if '_' in str(cursor):
-                        parts = str(cursor).split('_')
-                        if len(parts) == 2:
-                            cursor_download_count = int(parts[0])
-                            cursor_created_at = int(parts[1])
-                            base_query = base_query.start_after({
-                                "downloadCount": cursor_download_count,
-                                "createdAt": cursor_created_at
-                            })
-                    else:
-                        base_query = base_query.start_after({"createdAt": int(cursor)})
-                except (ValueError, IndexError):
-                    pass
-            
-            results = base_query.stream()
-            emojis = []
-            
-            for doc in results:
-                doc_data = doc.to_dict()
-                if 'createdAt' in doc_data and hasattr(doc_data['createdAt'], 'timestamp'):
-                    doc_data['createdAt'] = int(doc_data['createdAt'].timestamp() * 1000)
-                
-                if 'predictionID' not in doc_data:
-                    doc_data['predictionID'] = 'legacy'
-                
-                emojis.append(EmojiBase(**doc_data))
-            
-            if len(emojis) == limit:
-                last_emoji = emojis[-1]
-                next_cursor = f"{last_emoji.downloadCount}_{last_emoji.createdAt}"
-            else:
-                next_cursor = None
-            has_more = len(emojis) == limit
-            
-            return {
-                "emojis": emojis,
-                "next_cursor": next_cursor,
-                "has_more": has_more
-            }
-            
-        except Exception as e:
-            print(f"Error in list_popular_emojis: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise

@@ -12,24 +12,47 @@ firebase_service = FirebaseService()
 async def list_emojis(
     query: Optional[str] = Query(None, description="Text to search in the prompt field"),
     limit: int = Query(20, ge=1, le=100, description="Number of records per page"),
-    cursor: Optional[str] = Query(None, description="Cursor for pagination (createdAt timestamp)"),
+    cursor: Optional[int] = Query(None, description="Page offset - order number of first emoji for next page"),
     visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
     user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users"),
-    category: Optional[str] = Query(None, description="Filter by category (Animals, Celebrities, Memes, Food, Emotions)")
+    category: Optional[str] = Query(None, description="Filter by category (Animals, Celebrities, Memes, Food, Emotions)"),
+    sort: Optional[str] = Query(None, description="Sort order: 'recent' (newest first) or 'popular' (most popular first). Defaults to 'recent' if not specified.")
 ):
-    """List emojis by category, ordered by creation date"""
+    """List emojis with unified sorting"""
     try:
-        result = await firebase_service.list_user_emojis(
+        if sort is None:
+            sort = "recent"
+        
+        if sort not in ["recent", "popular"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid sort parameter '{sort}'. Must be 'recent' or 'popular'."
+            )
+        
+        result = await firebase_service.list_emojis(
             query=query,
             limit=limit,
             cursor=cursor,
             visibility=visibility,
             user_id=user_id,
-            category=category
+            category=category,
+            sort=sort
         )
         return EmojiListResponse(**result)
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list emojis: {str(e)}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in list_emojis: {str(e)}")
+        print(f"Request params: sort={sort}, limit={limit}, cursor={cursor}")
+        print(f"Full traceback:\n{error_details}")
+        
+        error_msg = str(e) if str(e) else "Unknown error occurred"
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to list emojis: {error_msg}"
+        )
 
 class DownloadResponse(BaseModel):
     success: bool
@@ -97,24 +120,3 @@ async def update_emoji_visibility(request: VisibilityUpdateRequest):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update visibility: {str(e)}")
-
-@router.get("/popular", response_model=EmojiListResponse)
-async def list_popular_emojis(
-    query: Optional[str] = Query(None, description="Text to search in the prompt field"),
-    limit: int = Query(20, ge=1, le=100, description="Number of records per page"),
-    cursor: Optional[str] = Query(None, description="Cursor for pagination (combination of popularity and createdAt timestamp)"),
-    visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
-    user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users")
-):
-    """List emojis by popularity (downloadCount), ordered by download count and creation date"""
-    try:
-        result = await firebase_service.list_popular_emojis(
-            query=query,
-            limit=limit,
-            cursor=cursor,
-            visibility=visibility,
-            user_id=user_id
-        )
-        return EmojiListResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list popular emojis: {str(e)}")
