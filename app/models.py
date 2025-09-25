@@ -2,6 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 
+
 class EmojiBase(BaseModel):
     emojiID: str
     imageURL: Optional[str] = None
@@ -14,10 +15,12 @@ class EmojiBase(BaseModel):
     downloadCount: int = 0
     category: Optional[str] = None
 
+
 class EmojiListResponse(BaseModel):
     emojis: List[EmojiBase]
     next_cursor: Optional[int] = None
     has_more: bool = False
+
 
 class Pack(BaseModel):
     name: str
@@ -29,10 +32,12 @@ class Pack(BaseModel):
     scrapedAt: int
     userID: str
 
+
 class PackListResponse(BaseModel):
     packs: List[Pack]
     next_cursor: Optional[int] = None
     has_more: bool = False
+
 
 class PackMigrationData(BaseModel):
     id: int = Field(..., description="Original pack ID")

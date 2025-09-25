@@ -8,27 +8,43 @@ from ..models import EmojiListResponse
 router = APIRouter()
 firebase_service = FirebaseService()
 
+
 @router.get("/", response_model=EmojiListResponse)
 async def list_emojis(
-    query: Optional[str] = Query(None, description="Text to search in the prompt field"),
+    query: Optional[str] = Query(
+        None, description="Text to search in the prompt field"
+    ),
     limit: int = Query(20, ge=1, le=100, description="Number of records per page"),
-    cursor: Optional[int] = Query(None, description="Page offset - order number of first emoji for next page"),
-    visibility: Optional[str] = Query(None, description="Filter by visibility (Public/Private)"),
-    user_id: Optional[str] = Query(None, description="Filter by specific user ID. If not provided, fetches emojis from all users"),
-    category: Optional[str] = Query(None, description="Filter by category (Animals, Celebrities, Memes, Food, Emotions)"),
-    sort: Optional[str] = Query(None, description="Sort order: 'recent' (newest first) or 'popular' (most popular first). Defaults to 'recent' if not specified.")
+    cursor: Optional[int] = Query(
+        None, description="Page offset - order number of first emoji for next page"
+    ),
+    visibility: Optional[str] = Query(
+        None, description="Filter by visibility (Public/Private)"
+    ),
+    user_id: Optional[str] = Query(
+        None,
+        description="Filter by specific user ID. If not provided, fetches emojis from all users",
+    ),
+    category: Optional[str] = Query(
+        None,
+        description="Filter by category (Animals, Celebrities, Memes, Food, Emotions)",
+    ),
+    sort: Optional[str] = Query(
+        None,
+        description="Sort order: 'recent' (newest first) or 'popular' (most popular first). Defaults to 'recent' if not specified.",
+    ),
 ):
     """List emojis with unified sorting"""
     try:
         if sort is None:
             sort = "recent"
-        
+
         if sort not in ["recent", "popular"]:
             raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid sort parameter '{sort}'. Must be 'recent' or 'popular'."
+                status_code=400,
+                detail=f"Invalid sort parameter '{sort}'. Must be 'recent' or 'popular'.",
             )
-        
+
         result = await firebase_service.list_emojis(
             query=query,
             limit=limit,
@@ -36,29 +52,31 @@ async def list_emojis(
             visibility=visibility,
             user_id=user_id,
             category=category,
-            sort=sort
+            sort=sort,
         )
         return EmojiListResponse(**result)
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
         print(f"Error in list_emojis: {str(e)}")
         print(f"Request params: sort={sort}, limit={limit}, cursor={cursor}")
         print(f"Full traceback:\n{error_details}")
-        
+
         error_msg = str(e) if str(e) else "Unknown error occurred"
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to list emojis: {error_msg}"
+            status_code=500, detail=f"Failed to list emojis: {error_msg}"
         )
+
 
 class DownloadResponse(BaseModel):
     success: bool
     emojiID: str
     downloadCount: int
     message: str
+
 
 class CategorizeResponse(BaseModel):
     success: bool
@@ -67,10 +85,12 @@ class CategorizeResponse(BaseModel):
     category: str
     message: str
 
+
 class VisibilityUpdateRequest(BaseModel):
     user_id: str
     emoji_id: str
     visibility: str
+
 
 class VisibilityResponse(BaseModel):
     success: bool
@@ -78,24 +98,30 @@ class VisibilityResponse(BaseModel):
     visibility: str
     message: str
 
+
 @router.post("/{user_id}/{emoji_id}/download", response_model=DownloadResponse)
 async def increment_download_count(
     user_id: str = Path(..., description="User ID who owns the emoji"),
-    emoji_id: str = Path(..., description="Emoji ID to increment download count for")
+    emoji_id: str = Path(..., description="Emoji ID to increment download count for"),
 ):
     """Increment download count for an emoji"""
     try:
-        result = await firebase_service.increment_emoji_download_count(user_id, emoji_id)
+        result = await firebase_service.increment_emoji_download_count(
+            user_id, emoji_id
+        )
         return DownloadResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to increment download count: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to increment download count: {str(e)}"
+        )
+
 
 @router.post("/{user_id}/{emoji_id}/categorize", response_model=CategorizeResponse)
 async def categorize_emoji(
     user_id: str = Path(..., description="User ID who owns the emoji"),
-    emoji_id: str = Path(..., description="Emoji ID to categorize")
+    emoji_id: str = Path(..., description="Emoji ID to categorize"),
 ):
     """Categorize an emoji using AI"""
     try:
@@ -104,19 +130,22 @@ async def categorize_emoji(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to categorize emoji: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to categorize emoji: {str(e)}"
+        )
+
 
 @router.put("/visibility", response_model=VisibilityResponse)
 async def update_emoji_visibility(request: VisibilityUpdateRequest):
     """Update emoji visibility between Public and Private"""
     try:
         result = await firebase_service.update_emoji_visibility(
-            request.user_id, 
-            request.emoji_id, 
-            request.visibility
+            request.user_id, request.emoji_id, request.visibility
         )
         return VisibilityResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update visibility: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update visibility: {str(e)}"
+        )

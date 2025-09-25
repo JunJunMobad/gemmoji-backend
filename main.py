@@ -20,7 +20,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(emoji_router, prefix="/api/v1/emojis", tags=["emojis"])
 app.include_router(pack_router, prefix="/api/v1/packs", tags=["packs"])
 
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -46,6 +47,7 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 app.openapi = custom_openapi
 
 if __name__ == "__main__":
@@ -53,5 +55,5 @@ if __name__ == "__main__":
         "main:app",
         host=os.getenv("API_HOST", "0.0.0.0"),
         port=int(os.getenv("API_PORT", 8000)),
-        reload=os.getenv("DEBUG", "False").lower() == "true"
+        reload=os.getenv("DEBUG", "False").lower() == "true",
     )
